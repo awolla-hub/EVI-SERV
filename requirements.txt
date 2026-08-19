@@ -1,0 +1,42 @@
+# Пятница Realtime server — pinned dependencies (CPU-only baseline).
+#
+# Torch is pulled from the CPU wheel index so no CUDA is dragged in. If you copy
+# these into another tool, keep this --extra-index-url line.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# --- Core framework -----------------------------------------------------------
+# [silero] -> Silero VAD (onnxruntime), [openai] -> OpenAILLMService.
+pipecat-ai[silero,openai]==1.5.0
+
+# --- Web server ---------------------------------------------------------------
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# --- Config / logging ---------------------------------------------------------
+pydantic-settings==2.7.1
+loguru>=0.7.3,<0.8
+
+# --- Audio / math -------------------------------------------------------------
+numpy==1.26.4
+torch==2.4.1            # Silero TTS (torch.hub) + GigaAM
+torchaudio==2.4.1       # GigaAM audio I/O
+
+# --- STT backend: faster-whisper (default, works out of the box) --------------
+faster-whisper==1.1.0
+
+# --- STT backend: GigaAM (best Russian quality; enable STT_BACKEND=gigaam) -----
+# The exact version / model id ('rnnt' vs 'v2_rnnt' vs 'v3_rnnt') depends on the
+# gigaam release you install — verify against https://github.com/salute-developers/GigaAM
+# Uncomment to install:
+# gigaam==0.4.0
+
+# Silero TTS (torch.hub) runtime dep
+omegaconf>=2.3,<3
+
+# Context-aware Russian stress placement for the TTS text (services/ru_accent.py).
+# OPTIONAL: if absent the server behaves exactly as before — Silero places its own stress.
+ruaccent>=1.5
+
+# Fish Audio WebSocket streaming: their live TTS protocol is MessagePack, not JSON.
+# Without it the service still runs — services/fish_tts.py degrades to the HTTP path.
+msgpack>=1.0

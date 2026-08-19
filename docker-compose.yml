@@ -1,0 +1,40 @@
+# Пятница Realtime — single-process cascade voice server.
+# TLS termination lives in nginx on the host (see deploy.md); this container
+# speaks plain ws:// on the loopback / docker network only.
+services:
+  pyatnitsa:
+    build: .
+    container_name: pyatnitsa
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # State paths INSIDE the container; all of them live in the mounted state dir below.
+      MEMORY_DB: ${MEMORY_DB:-/opt/pyatnitsa/memory.db}
+      EDIT_PROFILE_PATH: ${EDIT_PROFILE_PATH:-/opt/pyatnitsa/user_profile.txt}
+      EDIT_LASTSEEN_PATH: ${EDIT_LASTSEEN_PATH:-/opt/pyatnitsa/last_seen.txt}
+      VOICE_PROFILE: ${VOICE_PROFILE:-/opt/pyatnitsa/voice_profile.json}
+    ports:
+      # Expose only to localhost; nginx reverse-proxies :443 -> here.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Persist model downloads (Silero TTS via torch.hub, whisper weights)
+      # so restarts don't re-fetch hundreds of MB.
+      - model-cache:/root/.cache
+      # Writable /opt/pyatnitsa: cross-session memory (SQLite) + the voice / self-learning
+      # profiles. Without it the DB can't be opened and she forgets every session. Set
+      # PYATNITSA_STATE to a host path in .env to keep the data outside Docker.
+      - ${PYATNITSA_STATE:-pyatnitsa-state}:/opt/pyatnitsa
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  model-cache:
+  pyatnitsa-state:
